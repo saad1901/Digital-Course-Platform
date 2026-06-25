@@ -1,14 +1,11 @@
-/**
- * Run on server startup (imported in instrumentation.ts).
- * Creates all tables if they don't exist and seeds admin + demo data.
- */
 import Database from "better-sqlite3"
 import path from "path"
+import fs from "fs"
 import { db } from "./index"
 import { users, courses, chapters, lessons } from "./schema"
 import { hashPassword, uid } from "@/lib/auth"
-import { eq } from "drizzle-orm"
 
+// index.ts already creates the storage/ dir — just grab the same path
 const DB_PATH = path.join(process.cwd(), "storage", "learnhub.db")
 
 function runMigrations() {

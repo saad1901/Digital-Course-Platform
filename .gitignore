@@ -19,5 +19,7 @@ storage/*.db
 storage/*.db-shm
 storage/*.db-wal
 
-# Uploaded videos (large binary files)
-storage/videos/
+# Uploaded videos (large binary files) — keep the directory itself via .gitkeep
+storage/videos/*
+!storage/videos/.gitkeep
+!storage/.gitkeep
