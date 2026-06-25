@@ -54,16 +54,19 @@ export function resolveVideoUrl(rawUrl: string, lessonId: string): VideoSource {
   // ── Google Drive ──────────────────────────────────────────────────────────
   // Share link:  drive.google.com/file/d/FILE_ID/view
   // Open link:   drive.google.com/open?id=FILE_ID
+  // We use the direct download/stream URL so we can use a <video> tag
+  // instead of an iframe — this gives proper mobile scaling with no Drive UI chrome
   if (/drive\.google\.com/.test(url)) {
     const driveId = (
       url.match(/\/file\/d\/([^/?#]+)/) ||
       url.match(/[?&]id=([^&]+)/)
     )?.[1]
     if (driveId) {
+      // uc?export=download streams the raw file — works as a <video> src
+      // confirm=t bypasses the "large file" warning redirect
       return {
-        type: "iframe",
-        // /preview auto-plays inside iframe; no download button shown
-        src: `https://drive.google.com/file/d/${driveId}/preview`,
+        type: "video",
+        src: `https://drive.google.com/uc?export=download&confirm=t&id=${driveId}`,
       }
     }
   }

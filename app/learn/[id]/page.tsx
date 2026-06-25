@@ -53,8 +53,28 @@ function VideoArea({ lesson, lessonId }: { lesson: Lesson | null; lessonId: stri
             key={source.src}
             src={source.src}
             controls
+            playsInline
             onContextMenu={(e) => e.preventDefault()}
             controlsList="nodownload"
+            onError={(e) => {
+              // Google Drive direct URLs sometimes fail CORS on mobile browsers.
+              // Fall back to showing an open-in-new-tab link.
+              const target = e.currentTarget
+              const fallbackSrc = target.src
+              const wrapper = target.parentElement
+              if (!wrapper) return
+              target.style.display = "none"
+              const link = document.createElement("a")
+              link.href = fallbackSrc
+              link.target = "_blank"
+              link.rel = "noopener noreferrer"
+              link.textContent = "Open video in new tab"
+              link.style.cssText =
+                "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);" +
+                "background:var(--primary);color:var(--primary-foreground);" +
+                "padding:8px 18px;border-radius:8px;font-size:14px;text-decoration:none;"
+              wrapper.appendChild(link)
+            }}
             style={{
               position: "absolute",
               top: 0, left: 0,
