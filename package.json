@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "vercel-install": "pnpm install --no-frozen-lockfile",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."
