@@ -44,7 +44,7 @@ export default function CourseDetailPage() {
     <AppShell>
       <div className="flex flex-col items-center gap-4 py-20 text-center">
         <h1 className="text-xl font-semibold">Course not found</h1>
-        <Button render={<Link href="/" />}>Back to courses</Button>
+        <Button nativeButton={false} render={<Link href="/" />}>Back to courses</Button>
       </div>
     </AppShell>
   )
@@ -72,7 +72,7 @@ export default function CourseDetailPage() {
               <CheckCircle2 className="size-5" />
               <span className="font-semibold">You own this course</span>
             </div>
-            <Button className="w-full" render={<Link href={`/learn/${course.id}`} />}>Go to course</Button>
+            <Button className="w-full" nativeButton={false} render={<Link href={`/learn/${course.id}`} />}>Go to course</Button>
           </>
         ) : (
           <>
@@ -97,7 +97,7 @@ export default function CourseDetailPage() {
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
-        <Button variant="ghost" size="sm" className="w-fit" render={<Link href="/" />}>
+        <Button variant="ghost" size="sm" className="w-fit" nativeButton={false} render={<Link href="/" />}>
           <ArrowLeft data-icon="inline-start" />Back
         </Button>
 

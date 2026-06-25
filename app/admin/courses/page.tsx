@@ -103,7 +103,7 @@ export default function AdminCoursesPage() {
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" aria-label="Manage curriculum"
-                          render={<Link href={`/admin/courses/${course.id}`} />}>
+                          nativeButton={false} render={<Link href={`/admin/courses/${course.id}`} />}>
                           <ListTree />
                         </Button>
                         <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => openEdit(course)}>

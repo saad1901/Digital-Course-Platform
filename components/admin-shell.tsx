@@ -76,7 +76,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="mt-auto flex flex-col gap-1">
-          <Button variant="ghost" className="justify-start" render={<Link href="/" />}>
+          <Button variant="ghost" className="justify-start" nativeButton={false} render={<Link href="/" />}>
             <ArrowLeft data-icon="inline-start" />Back to site
           </Button>
           <Button variant="ghost" className="justify-start" onClick={handleLogout}>
@@ -97,11 +97,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-1">
             {NAV.map(({ href, label, icon: Icon }) => (
               <Button key={href} variant={pathname === href ? "secondary" : "ghost"} size="icon"
-                render={<Link href={href} />} aria-label={label}>
+                nativeButton={false} render={<Link href={href} />} aria-label={label}>
                 <Icon />
               </Button>
             ))}
-            <Button variant="ghost" size="icon" render={<Link href="/" />} aria-label="Back to site">
+            <Button variant="ghost" size="icon" nativeButton={false} render={<Link href="/" />} aria-label="Back to site">
               <ArrowLeft />
             </Button>
             <DropdownMenu>

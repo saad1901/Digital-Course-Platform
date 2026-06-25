@@ -111,7 +111,7 @@ export default function ProfilePage() {
 
         <Separator />
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" render={<Link href="/my-courses" />}>
+          <Button variant="outline" nativeButton={false} render={<Link href="/my-courses" />}>
             <LibraryBig data-icon="inline-start" />My Courses
           </Button>
           <Button variant="destructive" onClick={handleLogout}>

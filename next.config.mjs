@@ -12,11 +12,12 @@ const nextConfig = {
     unoptimized: true,
   },
 
+  // Hide the dev overlay indicator (the floating button bottom-left)
+  devIndicators: false,
+
   async headers() {
     return [
       {
-        // Prevent direct access to /storage — belt-and-suspenders
-        // (storage/ is outside public/ so Next.js won't serve it anyway)
         source: "/storage/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex" }],
       },

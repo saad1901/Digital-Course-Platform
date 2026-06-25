@@ -86,7 +86,7 @@ export default function MyCoursesPage() {
                     </div>
                     <Progress value={progress} className="h-1.5" />
                   </div>
-                  <Button className="mt-2 w-full" size="sm" render={<Link href={`/learn/${course.id}`} />}>
+                  <Button className="mt-2 w-full" size="sm" nativeButton={false} render={<Link href={`/learn/${course.id}`} />}>
                     <PlayCircle data-icon="inline-start" />
                     {progress > 0 ? "Continue" : "Start learning"}
                   </Button>
@@ -102,7 +102,7 @@ export default function MyCoursesPage() {
               <EmptyDescription>You haven&apos;t enrolled in any courses. Explore the catalog to get started.</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <Button render={<Link href="/" />}><Compass data-icon="inline-start" />Browse courses</Button>
+              <Button nativeButton={false} render={<Link href="/" />}><Compass data-icon="inline-start" />Browse courses</Button>
             </EmptyContent>
           </Empty>
         )}

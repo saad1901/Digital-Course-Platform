@@ -63,14 +63,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
               <Button key={item.href} variant={isActive(item.href) ? "secondary" : "ghost"}
-                render={<Link href={item.href} />}>
+                nativeButton={false} render={<Link href={item.href} />}>
                 <item.icon data-icon="inline-start" />
                 {item.label}
               </Button>
             ))}
             {user?.role === "admin" && (
               <Button variant={isActive("/admin") ? "secondary" : "ghost"}
-                render={<Link href="/admin" />}>
+                nativeButton={false} render={<Link href="/admin" />}>
                 <LayoutDashboard data-icon="inline-start" />
                 Admin
               </Button>
@@ -116,7 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </DropdownMenu>
             ) : (
               <>
-                <Button render={<Link href="/auth" />} className="hidden md:inline-flex">Sign in</Button>
+                <Button nativeButton={false} render={<Link href="/auth" />} className="hidden md:inline-flex">Sign in</Button>
                 <Button variant="ghost" size="icon" className="md:hidden"
                   aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
                   onClick={() => setMobileMenuOpen((o) => !o)}>

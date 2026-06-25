@@ -27,51 +27,74 @@ function VideoArea({ lesson, lessonId }: { lesson: Lesson | null; lessonId: stri
   const source = resolveVideoUrl(lesson.videoUrl ?? "", lessonId)
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-xl border bg-foreground">
-      {source.type === "iframe" && (
-        <iframe
-          key={source.src}
-          src={source.src}
-          title={lesson.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-          allowFullScreen
-          className="size-full"
-          sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
-        />
-      )}
+    <div className="w-full rounded-xl border bg-foreground overflow-hidden">
+      {/* 16:9 intrinsic ratio wrapper — works correctly for ALL iframe sources on mobile */}
+      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
 
-      {(source.type === "video" || source.type === "local") && (
-        <video
-          key={source.src}
-          src={source.src}
-          controls
-          className="size-full"
-          onContextMenu={(e) => e.preventDefault()}
-          controlsList="nodownload"
-        />
-      )}
+        {source.type === "iframe" && (
+          <iframe
+            key={source.src}
+            src={source.src}
+            title={lesson.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+            style={{
+              position: "absolute",
+              top: 0, left: 0,
+              width: "100%", height: "100%",
+              border: "none",
+            }}
+          />
+        )}
 
-      {source.type === "open" && (
-        <div className="flex size-full flex-col items-center justify-center gap-4 bg-foreground text-background px-6 text-center">
-          <PlayCircle className="size-14 opacity-70" />
-          <p className="text-sm opacity-80">This video can&apos;t be embedded directly.</p>
-          <a
-            href={source.src}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        {(source.type === "video" || source.type === "local") && (
+          <video
+            key={source.src}
+            src={source.src}
+            controls
+            onContextMenu={(e) => e.preventDefault()}
+            controlsList="nodownload"
+            style={{
+              position: "absolute",
+              top: 0, left: 0,
+              width: "100%", height: "100%",
+              objectFit: "contain",
+              background: "#000",
+            }}
+          />
+        )}
+
+        {source.type === "open" && (
+          <div
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+            className="flex flex-col items-center justify-center gap-4 px-6 text-center text-background"
           >
-            {source.label}
-          </a>
-        </div>
-      )}
+            <PlayCircle className="size-14 opacity-70" />
+            <p className="text-sm opacity-80">This video can&apos;t be embedded directly.</p>
+            <a
+              href={source.src}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              {source.label}
+            </a>
+          </div>
+        )}
 
-      {source.type === "empty" && (
-        <div className="flex size-full flex-col items-center justify-center gap-3 bg-foreground text-background">
-          <PlayCircle className="size-16 opacity-80" />
-          <p className="px-4 text-center text-sm opacity-80">Video placeholder — {lesson.title}</p>
-        </div>
-      )}
+        {source.type === "empty" && (
+          <div
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+            className="flex flex-col items-center justify-center gap-3 text-background"
+          >
+            <PlayCircle className="size-16 opacity-80" />
+            <p className="px-4 text-center text-sm opacity-80">
+              Video placeholder — {lesson.title}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -178,7 +201,7 @@ export default function PlayerPage() {
     return (
       <div className="flex min-h-svh flex-col items-center justify-center gap-4">
         <p className="text-lg font-semibold">Course not found</p>
-        <Button render={<Link href="/" />}>Back home</Button>
+        <Button nativeButton={false} render={<Link href="/" />}>Back home</Button>
       </div>
     )
   }
@@ -189,7 +212,7 @@ export default function PlayerPage() {
       <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
         <div className="flex h-14 items-center justify-between gap-3 px-4">
           <div className="flex min-w-0 items-center gap-2">
-            <Button variant="ghost" size="icon-sm" render={<Link href={`/courses/${course.id}`} />}>
+            <Button variant="ghost" size="icon-sm" nativeButton={false} render={<Link href={`/courses/${course.id}`} />}>
               <ArrowLeft />
             </Button>
             <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">

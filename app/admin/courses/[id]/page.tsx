@@ -38,7 +38,7 @@ export default function CurriculumPage({ params }: { params: Promise<{ id: strin
           <EmptyTitle>Course not found</EmptyTitle>
           <EmptyDescription>This course may have been deleted.</EmptyDescription>
         </EmptyHeader>
-        <Button render={<Link href="/admin/courses" />}>Back to courses</Button>
+        <Button nativeButton={false} render={<Link href="/admin/courses" />}>Back to courses</Button>
       </Empty>
     </AdminShell>
   )
@@ -47,7 +47,7 @@ export default function CurriculumPage({ params }: { params: Promise<{ id: strin
     <AdminShell>
       <div className="flex flex-col gap-6">
         <div>
-          <Button variant="ghost" size="sm" className="mb-2 -ml-2" render={<Link href="/admin/courses" />}>
+          <Button variant="ghost" size="sm" className="mb-2 -ml-2" nativeButton={false} render={<Link href="/admin/courses" />}>
             <ArrowLeft data-icon="inline-start" />Back to courses
           </Button>
           <div className="flex flex-wrap items-center justify-between gap-3">
