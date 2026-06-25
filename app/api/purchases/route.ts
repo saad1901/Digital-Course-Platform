@@ -4,49 +4,32 @@ import { purchases, courses } from "@/lib/db/schema"
 import { and, eq } from "drizzle-orm"
 import { getCurrentUser, uid } from "@/lib/auth"
 
-/** GET /api/purchases — list current user's purchases */
 export async function GET() {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 })
-
-  const rows = db.select().from(purchases).where(eq(purchases.userId, user.id)).all()
+  const rows = await db.select().from(purchases).where(eq(purchases.userId, user.id))
   return NextResponse.json(rows)
 }
 
-/** POST /api/purchases — create a purchase (simulated payment) */
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 })
-
   try {
     const { courseId, paymentId } = await req.json()
-    if (!courseId || !paymentId) {
+    if (!courseId || !paymentId)
       return NextResponse.json({ error: "courseId and paymentId required." }, { status: 400 })
-    }
 
-    const course = db.select().from(courses).where(eq(courses.id, courseId)).get()
+    const courseRows = await db.select().from(courses).where(eq(courses.id, courseId))
+    const course = courseRows[0]
     if (!course) return NextResponse.json({ error: "Course not found." }, { status: 404 })
 
-    // Idempotent — don't double-purchase
-    const existing = db.select().from(purchases)
+    const existing = await db.select().from(purchases)
       .where(and(eq(purchases.userId, user.id), eq(purchases.courseId, courseId)))
-      .get()
-    if (existing) return NextResponse.json(existing)
+    if (existing.length > 0) return NextResponse.json(existing[0])
 
-    const purchase = {
-      id: uid("pur"),
-      userId: user.id,
-      courseId,
-      amount: course.price,
-      paymentId,
-    }
-    db.insert(purchases).values(purchase).run()
-
-    // Increment student count
-    db.update(courses)
-      .set({ students: course.students + 1 })
-      .where(eq(courses.id, courseId))
-      .run()
+    const purchase = { id: uid("pur"), userId: user.id, courseId, amount: course.price, paymentId }
+    await db.insert(purchases).values(purchase)
+    await db.update(courses).set({ students: course.students + 1 }).where(eq(courses.id, courseId))
 
     return NextResponse.json(purchase, { status: 201 })
   } catch (err) {

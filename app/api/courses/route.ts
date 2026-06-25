@@ -1,30 +1,32 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { courses, chapters, lessons } from "@/lib/db/schema"
-import { asc, eq } from "drizzle-orm"
+import { asc } from "drizzle-orm"
+import type { InferSelectModel } from "drizzle-orm"
 
-/** GET /api/courses — full catalog with chapters & lessons */
+type Course  = InferSelectModel<typeof courses>
+type Chapter = InferSelectModel<typeof chapters>
+type Lesson  = InferSelectModel<typeof lessons>
+
 export async function GET() {
   try {
-    const allCourses = db.select().from(courses).orderBy(asc(courses.createdAt)).all()
-    const allChapters = db.select().from(chapters).orderBy(asc(chapters.position)).all()
-    const allLessons = db.select().from(lessons).orderBy(asc(lessons.position)).all()
+    const [allCourses, allChapters, allLessons] = await Promise.all([
+      db.select().from(courses).orderBy(asc(courses.createdAt)),
+      db.select().from(chapters).orderBy(asc(chapters.position)),
+      db.select().from(lessons).orderBy(asc(lessons.position)),
+    ]) as [Course[], Chapter[], Lesson[]]
 
-    const result = allCourses.map((c) => {
-      const chs = allChapters
+    const result = allCourses.map((c) => ({
+      ...c,
+      chapters: allChapters
         .filter((ch) => ch.courseId === c.id)
         .map((ch) => ({
           ...ch,
           lessons: allLessons
             .filter((l) => l.chapterId === ch.id)
-            .map((l) => ({
-              ...l,
-              // Never expose internal video path to unauthenticated listing
-              videoUrl: l.videoUrl.startsWith("local:") ? "" : l.videoUrl,
-            })),
-        }))
-      return { ...c, chapters: chs }
-    })
+            .map((l) => ({ ...l, videoUrl: l.videoUrl.startsWith("local:") ? "" : l.videoUrl })),
+        })),
+    }))
 
     return NextResponse.json(result)
   } catch (err) {

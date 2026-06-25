@@ -80,6 +80,6 @@ export async function getCurrentUser() {
   if (!token) return null
   const payload = await verifyToken(token)
   if (!payload) return null
-  const user = db.select().from(users).where(eq(users.id, payload.sub)).get()
-  return user ?? null
+  const rows = await db.select().from(users).where(eq(users.id, payload.sub))
+  return rows[0] ?? null
 }

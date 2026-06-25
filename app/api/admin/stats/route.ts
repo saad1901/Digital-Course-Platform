@@ -1,42 +1,45 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { users, courses, purchases } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
+import type { InferSelectModel } from "drizzle-orm"
+
+type Purchase = InferSelectModel<typeof purchases>
+type Course   = InferSelectModel<typeof courses>
+type User     = InferSelectModel<typeof users>
 
 export async function GET() {
   const user = await getCurrentUser()
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== "admin")
     return NextResponse.json({ error: "Forbidden." }, { status: 403 })
-  }
 
-  const allUsers = db.select().from(users).all()
-  const allCourses = db.select().from(courses).all()
-  const allPurchases = db.select().from(purchases).all()
+  const [allUsers, allCourses, allPurchases] = await Promise.all([
+    db.select().from(users),
+    db.select().from(courses),
+    db.select().from(purchases),
+  ]) as [User[], Course[], Purchase[]]
 
-  const totalRevenue = allPurchases.reduce((sum, p) => sum + p.amount, 0)
+  const totalRevenue = allPurchases.reduce((sum: number, p: Purchase) => sum + Number(p.amount), 0)
 
-  // Revenue per course
-  const revenueByCourse = allCourses.map((c) => ({
+  const revenueByCourse = allCourses.map((c: Course) => ({
     id: c.id,
     name: c.title.length > 14 ? c.title.slice(0, 14) + "…" : c.title,
     revenue: allPurchases
-      .filter((p) => p.courseId === c.id)
-      .reduce((sum, p) => sum + p.amount, 0),
+      .filter((p: Purchase) => p.courseId === c.id)
+      .reduce((s: number, p: Purchase) => s + Number(p.amount), 0),
   }))
 
-  // Recent purchases with user + course info
   const recent = [...allPurchases]
-    .sort((a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime())
+    .sort((a: Purchase, b: Purchase) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime())
     .slice(0, 10)
-    .map((p) => ({
+    .map((p: Purchase) => ({
       ...p,
-      userName: allUsers.find((u) => u.id === p.userId)?.name ?? "Unknown",
-      courseTitle: allCourses.find((c) => c.id === p.courseId)?.title ?? "Deleted course",
+      userName:    allUsers.find((u: User) => u.id === p.userId)?.name ?? "Unknown",
+      courseTitle: allCourses.find((c: Course) => c.id === p.courseId)?.title ?? "Deleted course",
     }))
 
   return NextResponse.json({
-    totalUsers: allUsers.filter((u) => u.role === "user").length,
+    totalUsers: allUsers.filter((u: User) => u.role === "user").length,
     totalSold: allPurchases.length,
     totalRevenue,
     totalCourses: allCourses.length,

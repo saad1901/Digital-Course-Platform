@@ -5,8 +5,8 @@ const nextConfig = {
     instrumentationHook: true,
   },
 
-  // Increase body size limit for video uploads (2 GB)
-  serverExternalPackages: ["better-sqlite3"],
+  // External packages that must stay server-side only
+  serverExternalPackages: ["@libsql/client", "@neondatabase/serverless"],
 
   images: {
     unoptimized: true,
