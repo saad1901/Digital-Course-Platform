@@ -22,18 +22,23 @@ function createDb(): { db: any; client: AnyClient } {
 
   // ── Neon / Postgres ──────────────────────────────────────────────────────
   if (dbUrl.startsWith("postgres")) {
-    const { neon }    = require("@neondatabase/serverless")
+    const { neon, neonConfig } = require("@neondatabase/serverless")
+    const ws = require("ws")
     const { drizzle } = require("drizzle-orm/neon-http")
+
+    // Required for Node.js — neon's HTTP mode uses fetch which doesn't work
+    // in Node without this. WebSocket mode works everywhere.
+    neonConfig.webSocketConstructor = ws
+    neonConfig.useSecureWebSocket = true
+
     const sql = neon(dbUrl)
     const db  = drizzle(sql, { schema })
 
     const client: AnyClient = {
       execRaw: async (rawSql: string) => {
-        // Split on semicolons and run each statement individually
-        // (neon-http doesn't support multi-statement strings in one call)
         const stmts = rawSql.split(";").map((s) => s.trim()).filter(Boolean)
         for (const stmt of stmts) {
-          await sql(stmt)
+          await sql.query(stmt)
         }
       },
     }
