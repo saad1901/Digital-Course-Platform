@@ -1,117 +1,118 @@
 /**
  * Self-bootstrapping migrations + seed.
  * Runs once on server startup via instrumentation.ts.
- * Dialect is detected automatically from the same env vars as lib/db/index.ts.
  */
-import { db } from "./index"
+import { db, client } from "./index"
 import { users, courses, chapters, lessons } from "./schema"
 import { hashPassword, uid } from "@/lib/auth"
 
-// ── DDL helpers ───────────────────────────────────────────────────────────────
+// ── DDL statements — one per element, no semicolons ──────────────────────────
+// Neon HTTP cannot run multiple statements in a single call.
+// We store each CREATE TABLE as a separate string and run them one-by-one.
 
 const isPostgres = (process.env.DATABASE_URL ?? "").startsWith("postgres")
 
-/** Run a raw SQL string regardless of adapter */
-async function exec(sql: string) {
-  // drizzle's execute() works on both neon-http and libsql drivers
-  await (db as any).execute(sql)
-}
+const DDL_POSTGRES = [
+  `CREATE TABLE IF NOT EXISTS users (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    email      TEXT NOT NULL UNIQUE,
+    password   TEXT NOT NULL,
+    role       TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user','admin')),
+    created_at TEXT NOT NULL DEFAULT to_char(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+  )`,
+  `CREATE TABLE IF NOT EXISTS courses (
+    id                TEXT PRIMARY KEY,
+    title             TEXT NOT NULL,
+    instructor        TEXT NOT NULL,
+    category          TEXT NOT NULL,
+    description       TEXT NOT NULL DEFAULT '',
+    short_description TEXT NOT NULL DEFAULT '',
+    duration          TEXT NOT NULL DEFAULT 'Self-paced',
+    price             NUMERIC NOT NULL DEFAULT 0,
+    thumbnail         TEXT NOT NULL DEFAULT '',
+    rating            NUMERIC NOT NULL DEFAULT 0,
+    students          INTEGER NOT NULL DEFAULT 0,
+    level             TEXT NOT NULL DEFAULT 'Beginner'
+                        CHECK(level IN ('Beginner','Intermediate','Advanced')),
+    created_at        TEXT NOT NULL DEFAULT to_char(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+  )`,
+  `CREATE TABLE IF NOT EXISTS chapters (
+    id        TEXT PRIMARY KEY,
+    course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    title     TEXT NOT NULL,
+    position  INTEGER NOT NULL DEFAULT 0
+  )`,
+  `CREATE TABLE IF NOT EXISTS lessons (
+    id         TEXT PRIMARY KEY,
+    chapter_id TEXT NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    title      TEXT NOT NULL,
+    video_url  TEXT NOT NULL DEFAULT '',
+    duration   TEXT NOT NULL DEFAULT '',
+    preview    INTEGER NOT NULL DEFAULT 0,
+    position   INTEGER NOT NULL DEFAULT 0
+  )`,
+  `CREATE TABLE IF NOT EXISTS purchases (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id    TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    amount       NUMERIC NOT NULL,
+    payment_id   TEXT NOT NULL,
+    purchased_at TEXT NOT NULL DEFAULT to_char(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+  )`,
+  `CREATE TABLE IF NOT EXISTS progress (
+    id        TEXT PRIMARY KEY,
+    user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    UNIQUE(user_id, lesson_id)
+  )`,
+]
+
+const DDL_SQLITE = [
+  `CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'user'
+      CHECK(role IN ('user','admin')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS courses (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, instructor TEXT NOT NULL,
+    category TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+    short_description TEXT NOT NULL DEFAULT '',
+    duration TEXT NOT NULL DEFAULT 'Self-paced',
+    price REAL NOT NULL DEFAULT 0, thumbnail TEXT NOT NULL DEFAULT '',
+    rating REAL NOT NULL DEFAULT 0, students INTEGER NOT NULL DEFAULT 0,
+    level TEXT NOT NULL DEFAULT 'Beginner'
+      CHECK(level IN ('Beginner','Intermediate','Advanced')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS chapters (
+    id TEXT PRIMARY KEY,
+    course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    title TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0)`,
+  `CREATE TABLE IF NOT EXISTS lessons (
+    id TEXT PRIMARY KEY,
+    chapter_id TEXT NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    title TEXT NOT NULL, video_url TEXT NOT NULL DEFAULT '',
+    duration TEXT NOT NULL DEFAULT '', preview INTEGER NOT NULL DEFAULT 0,
+    position INTEGER NOT NULL DEFAULT 0)`,
+  `CREATE TABLE IF NOT EXISTS purchases (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    amount REAL NOT NULL, payment_id TEXT NOT NULL,
+    purchased_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS progress (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    UNIQUE(user_id, lesson_id))`,
+]
+
+// ── Migrations ────────────────────────────────────────────────────────────────
 
 async function runMigrations() {
-  if (isPostgres) {
-    // Postgres DDL
-    await exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id         TEXT PRIMARY KEY,
-        name       TEXT NOT NULL,
-        email      TEXT NOT NULL UNIQUE,
-        password   TEXT NOT NULL,
-        role       TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user','admin')),
-        created_at TEXT NOT NULL DEFAULT (to_char(NOW(),'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
-      );
-      CREATE TABLE IF NOT EXISTS courses (
-        id                TEXT PRIMARY KEY,
-        title             TEXT NOT NULL,
-        instructor        TEXT NOT NULL,
-        category          TEXT NOT NULL,
-        description       TEXT NOT NULL DEFAULT '',
-        short_description TEXT NOT NULL DEFAULT '',
-        duration          TEXT NOT NULL DEFAULT 'Self-paced',
-        price             NUMERIC NOT NULL DEFAULT 0,
-        thumbnail         TEXT NOT NULL DEFAULT '',
-        rating            NUMERIC NOT NULL DEFAULT 0,
-        students          INTEGER NOT NULL DEFAULT 0,
-        level             TEXT NOT NULL DEFAULT 'Beginner'
-                            CHECK(level IN ('Beginner','Intermediate','Advanced')),
-        created_at        TEXT NOT NULL DEFAULT (to_char(NOW(),'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
-      );
-      CREATE TABLE IF NOT EXISTS chapters (
-        id        TEXT PRIMARY KEY,
-        course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-        title     TEXT NOT NULL,
-        position  INTEGER NOT NULL DEFAULT 0
-      );
-      CREATE TABLE IF NOT EXISTS lessons (
-        id         TEXT PRIMARY KEY,
-        chapter_id TEXT NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
-        title      TEXT NOT NULL,
-        video_url  TEXT NOT NULL DEFAULT '',
-        duration   TEXT NOT NULL DEFAULT '',
-        preview    INTEGER NOT NULL DEFAULT 0,
-        position   INTEGER NOT NULL DEFAULT 0
-      );
-      CREATE TABLE IF NOT EXISTS purchases (
-        id           TEXT PRIMARY KEY,
-        user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        course_id    TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-        amount       NUMERIC NOT NULL,
-        payment_id   TEXT NOT NULL,
-        purchased_at TEXT NOT NULL DEFAULT (to_char(NOW(),'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
-      );
-      CREATE TABLE IF NOT EXISTS progress (
-        id        TEXT PRIMARY KEY,
-        user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-        UNIQUE(user_id, lesson_id)
-      );
-    `)
-  } else {
-    // SQLite DDL (libSQL / Turso)
-    const stmts = [
-      `CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'user'
-          CHECK(role IN ('user','admin')),
-        created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
-      `CREATE TABLE IF NOT EXISTS courses (
-        id TEXT PRIMARY KEY, title TEXT NOT NULL, instructor TEXT NOT NULL,
-        category TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
-        short_description TEXT NOT NULL DEFAULT '',
-        duration TEXT NOT NULL DEFAULT 'Self-paced',
-        price REAL NOT NULL DEFAULT 0, thumbnail TEXT NOT NULL DEFAULT '',
-        rating REAL NOT NULL DEFAULT 0, students INTEGER NOT NULL DEFAULT 0,
-        level TEXT NOT NULL DEFAULT 'Beginner'
-          CHECK(level IN ('Beginner','Intermediate','Advanced')),
-        created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
-      `CREATE TABLE IF NOT EXISTS chapters (
-        id TEXT PRIMARY KEY, course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-        title TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0)`,
-      `CREATE TABLE IF NOT EXISTS lessons (
-        id TEXT PRIMARY KEY, chapter_id TEXT NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
-        title TEXT NOT NULL, video_url TEXT NOT NULL DEFAULT '',
-        duration TEXT NOT NULL DEFAULT '', preview INTEGER NOT NULL DEFAULT 0,
-        position INTEGER NOT NULL DEFAULT 0)`,
-      `CREATE TABLE IF NOT EXISTS purchases (
-        id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-        amount REAL NOT NULL, payment_id TEXT NOT NULL,
-        purchased_at TEXT NOT NULL DEFAULT (datetime('now')))`,
-      `CREATE TABLE IF NOT EXISTS progress (
-        id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-        UNIQUE(user_id, lesson_id))`,
-    ]
-    for (const s of stmts) await exec(s)
+  const stmts = isPostgres ? DDL_POSTGRES : DDL_SQLITE
+  for (const stmt of stmts) {
+    await client.execRaw(stmt)
   }
 }
 
