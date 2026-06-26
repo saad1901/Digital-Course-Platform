@@ -57,7 +57,8 @@ export default function CourseDetailPage() {
   }
 
   async function handleSuccess(paymentId: string) {
-    await purchasesApi.create(course!.id, paymentId)
+    // Purchase was already recorded server-side during payment verification.
+    // Nothing extra to do here — just redirect.
     toast.success("Course unlocked! Happy learning.")
     setCheckoutOpen(false)
     router.push("/my-courses")

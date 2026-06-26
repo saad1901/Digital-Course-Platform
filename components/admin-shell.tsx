@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect } from "react"
-import { LayoutDashboard, BookOpen, ArrowLeft, LogOut, GraduationCap } from "lucide-react"
+import { LayoutDashboard, BookOpen, ArrowLeft, LogOut, GraduationCap, Users } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { authApi } from "@/lib/api"
 import { cn, initials } from "@/lib/utils"
@@ -17,8 +17,9 @@ import {
 import { toast } from "sonner"
 
 const NAV = [
-  { href: "/admin",         label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/courses", label: "Courses",   icon: BookOpen        },
+  { href: "/admin",          label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/courses",  label: "Courses",   icon: BookOpen        },
+  { href: "/admin/students", label: "Students",  icon: Users           },
 ]
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

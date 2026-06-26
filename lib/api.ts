@@ -87,8 +87,46 @@ export interface AdminStats {
   }[]
 }
 
+export interface StudentEnrollment {
+  purchaseId: string
+  courseId: string
+  courseTitle: string
+  amount: number
+  paymentId: string
+  purchasedAt: string
+}
+
+export interface AdminStudent {
+  id: string
+  name: string
+  email: string
+  createdAt: string
+  enrollments: StudentEnrollment[]
+}
+
+export interface CourseStudent {
+  purchaseId: string
+  userId: string
+  name: string
+  email: string
+  amount: number
+  paymentId: string
+  purchasedAt: string
+}
+
 export const adminApi = {
   stats: () => apiFetch<AdminStats>("/api/admin/stats"),
+
+  // Students
+  listStudents: () => apiFetch<AdminStudent[]>("/api/admin/students"),
+  listCourseStudents: (courseId: string) =>
+    apiFetch<CourseStudent[]>(`/api/admin/courses/${courseId}/students`),
+  grantAccess: (userId: string, courseId: string) =>
+    apiFetch<{ ok: boolean }>("/api/admin/giveaway", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, courseId }),
+    }),
 
   // Courses
   listCourses: () => apiFetch<Course[]>("/api/admin/courses"),
