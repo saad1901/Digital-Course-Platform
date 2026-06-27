@@ -60,6 +60,7 @@ type Phase = "summary" | "processing" | "success" | "error"
 
 function useRazorpayScript() {
   const [ready, setReady] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -70,8 +71,11 @@ function useRazorpayScript() {
     const script = document.createElement("script")
     script.src = "https://checkout.razorpay.com/v1/checkout.js"
     script.async = true
-    script.onload  = () => setReady(true)
-    script.onerror = () => console.error("Failed to load Razorpay SDK")
+    script.onload = () => setReady(true)
+    script.onerror = () => {
+      console.error("Failed to load Razorpay SDK")
+      setError("Failed to load Razorpay SDK.")
+    }
     document.body.appendChild(script)
 
     return () => {
@@ -79,7 +83,7 @@ function useRazorpayScript() {
     }
   }, [])
 
-  return ready
+  return { ready, error }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -108,7 +112,9 @@ export function CheckoutDialog({
   const [phase, setPhase]     = useState<Phase>("summary")
   const [errorMsg, setErrorMsg] = useState("")
   const rzpRef = useRef<RazorpayInstance | null>(null)
-  const sdkReady = useRazorpayScript()
+  const { ready: sdkReady, error: sdkError } = useRazorpayScript()
+  const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+  const initError = sdkError ?? (!razorpayKey ? "Razorpay public key is not configured." : "")
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -129,6 +135,16 @@ export function CheckoutDialog({
   async function pay() {
     if (!sdkReady) {
       setErrorMsg("Razorpay SDK is still loading. Please try again in a moment.")
+      return
+    }
+    if (sdkError) {
+      setErrorMsg(sdkError)
+      setPhase("error")
+      return
+    }
+    if (!razorpayKey) {
+      setErrorMsg("Razorpay public key is not configured.")
+      setPhase("error")
       return
     }
     if (!course) return
@@ -155,9 +171,15 @@ export function CheckoutDialog({
         return
       }
 
+      if (!window.Razorpay) {
+        setErrorMsg("Razorpay checkout SDK failed to initialize.")
+        setPhase("error")
+        return
+      }
+
       // Step 2: Open Razorpay checkout modal
       const options: RazorpayOptions = {
-        key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+        key:         razorpayKey,
         amount:      orderData.amount,
         currency:    orderData.currency,
         name:        "LearnHub",
@@ -213,7 +235,7 @@ export function CheckoutDialog({
       rzpRef.current.open()
     } catch (err) {
       console.error("[CheckoutDialog] pay error:", err)
-      setErrorMsg("Something went wrong. Please try again.")
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong. Please try again.")
       setPhase("error")
     }
   }
@@ -270,18 +292,18 @@ export function CheckoutDialog({
             </div>
 
             {/* Error message */}
-            {phase === "error" && errorMsg && (
+            {(phase === "error" && errorMsg) || initError ? (
               <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                <span>{errorMsg}</span>
+                <span>{errorMsg || initError}</span>
               </div>
-            )}
+            ) : null}
 
             {/* Pay button */}
             <Button
               className="w-full"
               onClick={phase === "error" ? () => setPhase("summary") : pay}
-              disabled={isProcessing || !sdkReady}
+              disabled={isProcessing || !sdkReady || !!sdkError || !razorpayKey}
             >
               {isProcessing ? (
                 <>

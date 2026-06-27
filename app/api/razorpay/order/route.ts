@@ -5,10 +5,19 @@ import { courses, purchases } from "@/lib/db/schema"
 import { and, eq } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 
-const razorpay = new Razorpay({
-  key_id:     process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-})
+function getRazorpayClient() {
+  const keyId = process.env.RAZORPAY_KEY_ID
+  const keySecret = process.env.RAZORPAY_KEY_SECRET
+
+  if (!keyId || !keySecret) {
+    throw new Error("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be defined.")
+  }
+
+  return new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret,
+  })
+}
 
 /**
  * POST /api/razorpay/order
@@ -39,6 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Razorpay amounts are in the smallest currency unit (paise for INR)
     const amountInPaise = Math.round(course.price * 100)
+    const razorpay = getRazorpayClient()
 
     const order = await razorpay.orders.create({
       amount:   amountInPaise,
