@@ -3,7 +3,7 @@ import Razorpay from "razorpay"
 import { db } from "@/lib/db"
 import { courses, purchases } from "@/lib/db/schema"
 import { and, eq } from "drizzle-orm"
-import { getCurrentUser } from "@/lib/auth"
+import { getCurrentUser, uid } from "@/lib/auth"
 
 function getRazorpayClient() {
   const keyId = process.env.RAZORPAY_KEY_ID
@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
     const order = await razorpay.orders.create({
       amount:   amountInPaise,
       currency: "INR",
-      receipt:  `receipt_${user.id}_${courseId}_${Date.now()}`,
+      // Razorpay enforces a max length of 40 for receipt IDs. Use a short uid.
+      receipt:  uid("rcpt"),
       notes: {
         courseId,
         userId: user.id,
