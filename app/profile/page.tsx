@@ -86,23 +86,31 @@ export default function ProfilePage() {
         </div>
 
         <Card>
-          <CardHeader><CardTitle>Purchase history</CardTitle></CardHeader>
+          <CardHeader className="flex items-start justify-between gap-3">
+            <CardTitle>Transaction history</CardTitle>
+            <div className="text-sm text-muted-foreground">
+              {purchases.length} transaction{purchases.length !== 1 ? "s" : ""}
+            </div>
+          </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {purchases.length === 0 && <p className="text-sm text-muted-foreground">No purchases yet.</p>}
             {purchases.map((p) => {
-              const c = courses.find((c) => c.id === p.courseId)
+              const course = courses.find((c) => c.id === p.courseId)
               return (
-                <div key={p.id} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <BadgeCheck className="size-4 text-primary" />
-                    <div>
-                      <p className="text-sm font-medium">{c?.title ?? "Course"}</p>
+                <div key={p.id} className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{course?.title ?? "Course purchase"}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(p.purchasedAt).toLocaleDateString()} • {p.paymentId}
+                        {new Date(p.purchasedAt).toLocaleDateString()} · {p.paymentId}
                       </p>
                     </div>
+                    <span className="text-sm font-semibold text-foreground">{formatPrice(p.amount)}</span>
                   </div>
-                  <span className="text-sm font-medium">{formatPrice(p.amount)}</span>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>Transaction ID:</span>
+                    <span className="font-mono truncate max-w-[14rem]" title={p.id}>{p.id}</span>
+                  </div>
                 </div>
               )
             })}

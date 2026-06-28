@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Recent enrollments</CardTitle>
+              <CardTitle>Recent transactions</CardTitle>
               <CardDescription>Latest course purchases</CardDescription>
             </CardHeader>
             <CardContent>
@@ -89,15 +89,32 @@ export default function AdminDashboardPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Student</TableHead>
-                      <TableHead>Course</TableHead>
+                      <TableHead className="hidden md:table-cell">Course</TableHead>
+                      <TableHead className="hidden sm:table-cell">Payment</TableHead>
+                      <TableHead className="hidden lg:table-cell">Date</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {stats.recentPurchases.map((p) => (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.userName}</TableCell>
-                        <TableCell className="max-w-32 truncate text-muted-foreground">{p.courseTitle}</TableCell>
+                        <TableCell className="font-medium">
+                          <p>{p.userName}</p>
+                          <p className="text-xs text-muted-foreground md:hidden">{p.courseTitle}</p>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell max-w-32 truncate text-muted-foreground">
+                          {p.courseTitle}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <span className="font-mono text-xs text-muted-foreground truncate block" title={p.paymentId}>
+                            {p.paymentId}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
+                          {new Date(p.purchasedAt).toLocaleDateString(undefined, {
+                            year: "numeric", month: "short", day: "numeric",
+                          })}
+                        </TableCell>
                         <TableCell className="text-right">
                           <Badge variant="secondary">{formatPrice(p.amount)}</Badge>
                         </TableCell>
