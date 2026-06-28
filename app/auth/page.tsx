@@ -140,12 +140,6 @@ function AuthForm() {
               </form>
             </TabsContent>
           </Tabs>
-
-          <div className="mt-6 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">Demo accounts</p>
-            <p>Admin: admin@learnhub.com / admin123</p>
-            <p>Student: student@learnhub.com / student123</p>
-          </div>
         </CardContent>
       </Card>
     </div>
