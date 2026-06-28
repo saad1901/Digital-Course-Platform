@@ -61,7 +61,8 @@ export default function CourseDetailPage() {
     // Nothing extra to do here — just redirect.
     toast.success("Course unlocked! Happy learning.")
     setCheckoutOpen(false)
-    router.push("/my-courses")
+    router.replace("/my-courses")
+    router.refresh()
   }
 
   const purchaseCard = (

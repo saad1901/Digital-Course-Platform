@@ -112,6 +112,7 @@ export function CheckoutDialog({
   const [phase, setPhase]     = useState<Phase>("summary")
   const [errorMsg, setErrorMsg] = useState("")
   const [orderId, setOrderId] = useState<string | null>(null)
+  const orderIdRef = useRef<string | null>(null)
   const rzpRef = useRef<RazorpayInstance | null>(null)
   const { ready: sdkReady, error: sdkError } = useRazorpayScript()
   const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
@@ -122,6 +123,8 @@ export function CheckoutDialog({
     if (open) {
       setPhase("summary")
       setErrorMsg("")
+      setOrderId(null)
+      orderIdRef.current = null
     }
   }, [open])
 
@@ -134,7 +137,8 @@ export function CheckoutDialog({
   }
 
   async function resolveOrder() {
-    if (!orderId || !course) return false
+    const activeOrderId = orderIdRef.current
+    if (!activeOrderId || !course) return false
 
     setPhase("processing")
     setErrorMsg("")
@@ -144,7 +148,7 @@ export function CheckoutDialog({
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ razorpay_order_id: orderId, courseId: course.id }),
+        body: JSON.stringify({ razorpay_order_id: activeOrderId, courseId: course.id }),
       })
       const verifyData = await verifyRes.json()
 
@@ -155,6 +159,7 @@ export function CheckoutDialog({
       }
 
       setOrderId(null)
+      orderIdRef.current = null
       setPhase("success")
       setTimeout(() => onSuccess(verifyData.paymentId), 900)
       return true
@@ -206,6 +211,7 @@ export function CheckoutDialog({
       }
 
       setOrderId(orderData.orderId)
+      orderIdRef.current = orderData.orderId
 
       if (!window.Razorpay) {
         setErrorMsg("Razorpay checkout SDK failed to initialize.")
@@ -231,7 +237,8 @@ export function CheckoutDialog({
           escape:       false,
           backdropclose: false,
           ondismiss: () => {
-            if (phase === "processing" && orderId) {
+            const activeOrderId = orderIdRef.current
+            if (phase === "processing" && activeOrderId) {
               resolveOrder().then((resolved) => {
                 if (!resolved) setPhase("summary")
               })
@@ -266,6 +273,8 @@ export function CheckoutDialog({
             }
 
             // Step 4: Success
+            setOrderId(null)
+            orderIdRef.current = null
             setPhase("success")
             setTimeout(() => onSuccess(response.razorpay_payment_id), 900)
           } catch (err) {
