@@ -57,18 +57,21 @@ export async function POST(req: NextRequest) {
     if (!paymentId) {
       // Fallback: fetch Razorpay order and payment details directly.
       const order = await razorpay.orders.fetch(razorpay_order_id)
-      if (!order || order.status !== "paid")
+      const successfulOrderStatuses = ["paid", "authorized"]
+      const successfulPaymentStatuses = ["captured", "authorized"]
+
+      if (!order || !successfulOrderStatuses.includes(order.status))
         return NextResponse.json({ error: "Payment not completed yet." }, { status: 400 })
 
       const payments = await razorpay.orders.fetchPayments(razorpay_order_id)
-      const capturedPayment = Array.isArray(payments.items)
-        ? payments.items.find((item: any) => item.status === "captured")
+      const successfulPayment = Array.isArray(payments.items)
+        ? payments.items.find((item: any) => successfulPaymentStatuses.includes(item.status))
         : null
 
-      if (!capturedPayment)
-        return NextResponse.json({ error: "No captured payment found for this order." }, { status: 400 })
+      if (!successfulPayment)
+        return NextResponse.json({ error: "No successful payment found for this order." }, { status: 400 })
 
-      paymentId = capturedPayment.id
+      paymentId = successfulPayment.id
     }
 
     // ── Fetch course ─────────────────────────────────────────────────────────
