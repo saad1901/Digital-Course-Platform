@@ -111,6 +111,7 @@ export function CheckoutDialog({
 }) {
   const [phase, setPhase]     = useState<Phase>("summary")
   const [errorMsg, setErrorMsg] = useState("")
+  const [orderId, setOrderId] = useState<string | null>(null)
   const rzpRef = useRef<RazorpayInstance | null>(null)
   const { ready: sdkReady, error: sdkError } = useRazorpayScript()
   const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
@@ -130,6 +131,39 @@ export function CheckoutDialog({
     // Don't allow closing while payment is in progress
     if (phase === "processing") return
     onOpenChange(o)
+  }
+
+  async function resolveOrder() {
+    if (!orderId || !course) return false
+
+    setPhase("processing")
+    setErrorMsg("")
+
+    try {
+      const verifyRes = await fetch("/api/razorpay/verify", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ razorpay_order_id: orderId, courseId: course.id }),
+      })
+      const verifyData = await verifyRes.json()
+
+      if (!verifyRes.ok) {
+        setErrorMsg(verifyData.error ?? "Payment verification failed.")
+        setPhase("error")
+        return false
+      }
+
+      setOrderId(null)
+      setPhase("success")
+      setTimeout(() => onSuccess(verifyData.paymentId), 900)
+      return true
+    } catch (err) {
+      console.error("[CheckoutDialog] resolveOrder error:", err)
+      setErrorMsg("Payment verification failed. Please contact support.")
+      setPhase("error")
+      return false
+    }
   }
 
   async function pay() {
@@ -171,6 +205,8 @@ export function CheckoutDialog({
         return
       }
 
+      setOrderId(orderData.orderId)
+
       if (!window.Razorpay) {
         setErrorMsg("Razorpay checkout SDK failed to initialize.")
         setPhase("error")
@@ -195,11 +231,19 @@ export function CheckoutDialog({
           escape:       false,
           backdropclose: false,
           ondismiss: () => {
-            // User closed the Razorpay modal without paying
+            if (phase === "processing" && orderId) {
+              resolveOrder().then((resolved) => {
+                if (!resolved) setPhase("summary")
+              })
+              return
+            }
             setPhase("summary")
           },
         },
         handler: async (response: RazorpayResponse) => {
+          // Close the Razorpay modal immediately after payment success.
+          rzpRef.current?.close()
+
           // Step 3: Verify payment signature server-side
           try {
             const verifyRes = await fetch("/api/razorpay/verify", {
@@ -224,7 +268,8 @@ export function CheckoutDialog({
             // Step 4: Success
             setPhase("success")
             setTimeout(() => onSuccess(response.razorpay_payment_id), 900)
-          } catch {
+          } catch (err) {
+            console.error("[CheckoutDialog] verify error:", err)
             setErrorMsg("Payment verification failed. Please contact support.")
             setPhase("error")
           }
