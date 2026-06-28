@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       if (!order || order.status !== "paid")
         return NextResponse.json({ error: "Payment not completed yet." }, { status: 400 })
 
-      const payments = await razorpay.payments.all({ order_id: razorpay_order_id })
+      const payments = await razorpay.orders.fetchPayments(razorpay_order_id)
       const capturedPayment = Array.isArray(payments.items)
         ? payments.items.find((item: any) => item.status === "captured")
         : null
